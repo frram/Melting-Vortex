@@ -18,6 +18,8 @@ def melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav):
 
     whst = np.zeros((nt//isav,nx,ny))
     psihst = np.zeros((nt//isav,nx,ny))
+    wfhst = np.zeros((nt//isav,nx,ny))
+    wfhst[0,:,:] = abs(np.fft.fftshift(wf))
     whst[0,:,:] = np.real(sf.ifft2(wf))
     psihst[0,:,:] = np.real(sf.ifft2(psif))
 
@@ -34,9 +36,10 @@ def melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav):
 
             w = np.real(sf.ifft2(wf))
             psi = np.real(sf.ifft2(psif))
+            wfhst[it//isav,:,:] = abs(np.fft.fftshift(wf))
             whst[it//isav,:,:] = w
             psihst[it//isav,:,:] = psi
-    return whst, psihst
+    return whst, wfhst, psihst
 
 def adv(wf,omega,alpha,Fw):
     psif = wf/(-(KX2+KY2)); psif[0,0]=0
@@ -57,18 +60,18 @@ def adv(wf,omega,alpha,Fw):
     return advff
 
 nx=128; ny=128; nt=10000; isav=nt//10
-alpha=0.001; omega=1000
+alpha=0.1; omega=50
 dt=1e-2
-lx=2*np.pi; ly=lx
+lx=2*np.pi/0.15; ly=lx
 dx=lx/nx; dy=ly/ny
 x = np.arange(nx)*dx
 y = np.arange(ny)*dy
 X,Y=np.meshgrid(x,y)
 
-n=2
-Fw = -1*n**3*(np.cos(n*X)+np.cos(n*Y))/omega
-w = -1*n*(np.cos(n*X)+np.cos(n*Y))*0.01
+n=4
+Fw = -1*n**3*(np.cos(n*X*0.15)+np.cos(n*Y*0.15))/omega
+w = -1*n*(np.cos(n*X*0.15)+np.cos(n*Y*0.15))
 
-whst, psihst = melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav)
+whst, wfhst, psihst = melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav)
 
-np.savez('./melting-test.npz',whst=whst, psihst=psihst)
+np.savez('./melting-test.npz',whst=whst, wfhst=wfhst, psihst=psihst)
