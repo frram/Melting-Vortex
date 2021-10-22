@@ -59,8 +59,8 @@ def adv(wf,omega,alpha,Fw):
 
     return advff
 
-nx=128; ny=128; nt=10000; isav=nt//10
-alpha=0.1; omega=50
+nx=128; ny=128; nt=20000; isav=nt//10
+alpha=1; omega=10
 dt=1e-2
 lx=2*np.pi/0.15; ly=lx
 dx=lx/nx; dy=ly/ny
@@ -70,8 +70,13 @@ X,Y=np.meshgrid(x,y)
 
 n=4
 Fw = -1*n**3*(np.cos(n*X*0.15)+np.cos(n*Y*0.15))/omega
-w = -1*n*(np.cos(n*X*0.15)+np.cos(n*Y*0.15))
+wnoise = []
+for v in range(1,3):
+    for b in range(1,3):
+        wn_temp = (np.sin(v*X*0.15+b*Y*0.15)+np.cos(v*X*0.15+b*Y*0.15))*(b**2/np.sqrt(v**2+b**2))
+        wnoise.append(wn_temp)
+w = -1*n*(np.cos(n*X*0.15)+np.cos(n*Y*0.15))+0.0001*sum(wnoise)
 
 whst, wfhst, psihst = melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav)
 
-np.savez('./melting-test.npz',whst=whst, wfhst=wfhst, psihst=psihst)
+np.savez('./melt-res'+str(nx)+'-n'+str(n)+'-alpha'+str(alpha)+'-omega'+str(omega)+'.npz',whst=whst, wfhst=wfhst, psihst=psihst)
