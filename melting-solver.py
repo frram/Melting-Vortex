@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.fftpack as sf
 import math as mt
+import glob
 
 def melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav):
     global KX,KY,KX2,KY2,KXD,KYD
@@ -19,6 +20,8 @@ def melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav):
     whst = np.zeros((nt//isav,nx,ny))
     psihst = np.zeros((nt//isav,nx,ny))
     wfhst = np.zeros((nt//isav,nx,ny))
+    psifhst = np.zeros((nt//isav,nx,ny))
+    psifhst[0,:,:] = abs(np.fft.fftshift(psif))
     wfhst[0,:,:] = abs(np.fft.fftshift(wf))
     whst[0,:,:] = np.real(sf.ifft2(wf))
     psihst[0,:,:] = np.real(sf.ifft2(psif))
@@ -36,10 +39,11 @@ def melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav):
 
             w = np.real(sf.ifft2(wf))
             psi = np.real(sf.ifft2(psif))
+            psifhst[it//isav,:,:] = abs(np.fft.ffitshift(psif))
             wfhst[it//isav,:,:] = abs(np.fft.fftshift(wf))
             whst[it//isav,:,:] = w
             psihst[it//isav,:,:] = psi
-    return whst, wfhst, psihst
+    return whst, wfhst, psihst, psifhst
 
 def adv(wf,omega,alpha,Fw):
     psif = wf/(-(KX2+KY2)); psif[0,0]=0
@@ -60,7 +64,7 @@ def adv(wf,omega,alpha,Fw):
     return advff
 
 nx=128; ny=128; nt=20000; isav=nt//10
-alpha=1; omega=10
+alpha=1; omega=10; beta = 1
 dt=1e-2
 lx=2*np.pi/0.15; ly=lx
 dx=lx/nx; dy=ly/ny
@@ -69,14 +73,22 @@ y = np.arange(ny)*dy
 X,Y=np.meshgrid(x,y)
 
 n=4
-Fw = -1*n**3*(np.cos(n*X*0.15)+np.cos(n*Y*0.15))/omega
-wnoise = []
-for v in range(1,3):
-    for b in range(1,3):
-        wn_temp = (np.sin(v*X*0.15+b*Y*0.15)+np.cos(v*X*0.15+b*Y*0.15))*(b**2/np.sqrt(v**2+b**2))
-        wnoise.append(wn_temp)
-w = -1*n*(np.cos(n*X*0.15)+np.cos(n*Y*0.15))+0.0001*sum(wnoise)
+Fw = -1*beta*n**3*(np.cos(n*X*0.15)+np.cos(n*Y*0.15))/omega
 
-whst, wfhst, psihst = melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav)
+run_files = sorted(glob.glob('./melt-res*.npz'))
+run_iter = len(run_files)
+if run_iter == 0:
+    wnoise = []
+    for v in range(1,3):
+        for b in range(1,3):
+            wn_temp = (np.sin(v*X*0.15+b*Y*0.15)+np.cos(v*X*0.15+b*Y*0.15))*(b**2/np.sqrt(v**2+b**2))
+            wnoise.append(wn_temp)
+    w = -1*n*(np.cos(n*X*0.15)+np.cos(n*Y*0.15))+0.0001*sum(wnoise)
+else:
+    data = np.load(run_files[-1])
+    w_tmp = data['whst']
+    w = w_tmp[-1,:,:]
 
-np.savez('./melt-res'+str(nx)+'-n'+str(n)+'-alpha'+str(alpha)+'-omega'+str(omega)+'.npz',whst=whst, wfhst=wfhst, psihst=psihst)
+whst, wfhst, psihst, psifhst = melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav)
+
+np.savez('./melt-res'+str(nx)+'-n'+str(n)+'-alpha'+str(alpha)+'-omega'+str(omega)+'-beta'+str(beta)+'.npz',whst=whst, wfhst=wfhst, psihst=psihst, psifhst=psifhst)
