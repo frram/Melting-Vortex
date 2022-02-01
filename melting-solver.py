@@ -39,7 +39,7 @@ def melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav):
 
             w = np.real(sf.ifft2(wf))
             psi = np.real(sf.ifft2(psif))
-            psifhst[it//isav,:,:] = abs(np.fft.ffitshift(psif))
+            psifhst[it//isav,:,:] = abs(np.fft.fftshift(psif))
             wfhst[it//isav,:,:] = abs(np.fft.fftshift(wf))
             whst[it//isav,:,:] = w
             psihst[it//isav,:,:] = psi
@@ -91,4 +91,4 @@ else:
 
 whst, wfhst, psihst, psifhst = melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav)
 
-np.savez('./melt-res'+str(nx)+'-n'+str(n)+'-alpha'+str(alpha)+'-omega'+str(omega)+'-beta'+str(beta)+'.npz',whst=whst, wfhst=wfhst, psihst=psihst, psifhst=psifhst)
+np.savez('./melt-res'+str(nx)+'-n'+str(n)+'-alpha'+str(alpha)+'-omega'+str(omega)+'-beta'+str(beta)+'-0'+str(run_iter)+'.npz',whst=whst, wfhst=wfhst, psihst=psihst, psifhst=psifhst,alpha=alpha, omega=omega, beta=beta)
