@@ -115,10 +115,5 @@ print('Peclet Number: ' + str(int(Pe)))
 print('iterations: ' + str(int(steps)))
 navgy = np.sum(nhst[-1,:,:]*dy,axis=0)/Ly
 ntot = np.sum(navgy*dy)*Ly
-if ntot > 0.55:
-    print('Complete: True')
-    print('nmax = ' + str(np.max(navgy)))
-else:
-    print('Complete: False')
-    print('Concentration: ' + str(ntot))
-    print('nmax = ' + str(np.max(navgy)))
+print('nmax = ' + str(np.max(navgy)))
+print('Concentration: ' + str(ntot))
