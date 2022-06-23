@@ -14,17 +14,34 @@ def melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav):
     KX2,KY2=np.meshgrid(kx2,ky2)
     KXD,KYD=np.meshgrid(kxd,kyd)
 
+    dx = lx/nx
+
     wf = sf.fft2(w)
     psif = wf/(-(KX2+KY2)); psif[0,0] = 0
+    uxf = -1.j*KY*psif; ux = np.real(sf.ifft2(uxf *KXD*KYD))
+    uyf = 1.j*KX*psif; uy = np.real(sf.ifft2(uyf *KXD*KYD))
+    obu = np.gradient(ux,axis=1)*np.gradient(uy,axis=0)-np.gradient(uy,axis=1)*np.gradient(ux,axis=0)
+    obuf = sf.fft2(obu); obuf_c = np.conj(obuf)
+    energy_k_tmp = obuf*obuf_c
+    usq = ux**2 + uy**2
+    energy = np.sum(np.sum(usq[:,:]*dx,axis=0)*dx)/lx**2
 
     whst = np.zeros((nt//isav,nx,ny))
     psihst = np.zeros((nt//isav,nx,ny))
+    obuhst = np.zeros((nt//isav,nx,ny))
     wfhst = np.zeros((nt//isav,nx,ny))
     psifhst = np.zeros((nt//isav,nx,ny))
+    energyfhst = np.zeros((nt//isav,nx,ny))
+    energyhst = np.zeros((nt//isav))
+
     psifhst[0,:,:] = abs(np.fft.fftshift(psif))
     wfhst[0,:,:] = abs(np.fft.fftshift(wf))
+    energyfhst[0,:,:] = abs(np.fft.fftshift(energy_k_tmp))
+
     whst[0,:,:] = np.real(sf.ifft2(wf))
     psihst[0,:,:] = np.real(sf.ifft2(psif))
+    obuhst[0,:,:] = obu[:,:]
+    energyhst[0] = energy
 
     for it in range(1,nt):
         gw1 = adv(wf,omega,alpha,Fw)
@@ -36,35 +53,43 @@ def melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav):
 
         if(it%isav==0):
             psif = wf/(-(KX2+KY2)); psif[0,0]=0
-
+            uxf = -1.j*KY*psif; ux = np.real(sf.ifft2(uxf *KXD*KYD))
+            uyf = 1.j*KX*psif; uy = np.real(sf.ifft2(uyf *KXD*KYD))
+            obu = np.gradient(ux,axis=1)*np.gradient(uy,axis=0)-np.gradient(uy,axis=1)*np.gradient(ux,axis=0)
+            obuf = sf.fft2(obu); obuf_c = np.conj(obuf)
+            energy_k_tmp = obuf*obuf_c
+            usq = ux**2 + uy**2
+            energy = np.sum(np.sum(usq*dx,axis=0)*dx)/lx**2
             w = np.real(sf.ifft2(wf))
             psi = np.real(sf.ifft2(psif))
+
             psifhst[it//isav,:,:] = abs(np.fft.fftshift(psif))
             wfhst[it//isav,:,:] = abs(np.fft.fftshift(wf))
+            energyfhst[it//isav,:,:] = abs(np.fft.fftshift(energy_k_tmp))
+
             whst[it//isav,:,:] = w
             psihst[it//isav,:,:] = psi
-    return whst, wfhst, psihst, psifhst
+            obuhst[it//isav,:,:] = obu[:,:]
+            energyhst[it//isav] = energy
+    return whst, wfhst, psihst, psifhst, obuhst, energyfhst, energyhst
 
 def adv(wf,omega,alpha,Fw):
     psif = wf/(-(KX2+KY2)); psif[0,0]=0
-
-    # psi = np.real(sf.ifft2(psif))
     w = np.real(sf.ifft2(wf))
 
     wxf = 1.j*KX*wf; wx = np.real(sf.ifft2(wxf *KXD*KYD))
     wyf = 1.j*KY*wf; wy = np.real(sf.ifft2(wyf *KXD*KYD))
     etaf = -(KX2+KY2)*wf; eta = np.real(sf.ifft2(etaf))
-    uxf = 1.j*KY*psif; ux = np.real(sf.ifft2(uxf *KXD*KYD))
+    uxf = -1.j*KY*psif; ux = np.real(sf.ifft2(uxf *KXD*KYD))
     uyf = 1.j*KX*psif; uy = np.real(sf.ifft2(uyf *KXD*KYD))
 
-    advf = ux*wx - uy*wy + (1/omega)*eta - alpha*w + Fw
+    advf = -ux*wx - uy*wy + (1/omega)*eta - alpha*w + Fw
 
     advff = sf.fft2(advf)
 
     return advff
 
-nx=128; ny=128; nt=20000; isav=nt//10
-alpha=1; omega=10; beta = 1
+nx=128; ny=128; nt=1000000; isav=nt//25
 dt=1e-2
 lx=2*np.pi/0.15; ly=lx
 dx=lx/nx; dy=ly/ny
@@ -72,10 +97,15 @@ x = np.arange(nx)*dx
 y = np.arange(ny)*dy
 X,Y=np.meshgrid(x,y)
 
-n=4
-Fw = -1*beta*n**3*(np.cos(n*X*0.15)+np.cos(n*Y*0.15))/omega
+n=4; k=10; nu=1e-2; alpha_p=0.55
+Re=1.375 #SX state
+omega=n*Re # increment by 0.5
+Famp=(nu**2)*(k**3)*Re
+alpha = n*nu*alpha_p*k/Famp
 
-run_files = sorted(glob.glob('./melt-res*.npz'))
+Fw = -1*n**3*(np.cos(n*X*0.15)+np.cos(n*Y*0.15))/omega
+
+run_files = sorted(glob.glob('./melt-*.npz'))
 run_iter = len(run_files)
 if run_iter == 0:
     wnoise = []
@@ -89,6 +119,9 @@ else:
     w_tmp = data['whst']
     w = w_tmp[-1,:,:]
 
-whst, wfhst, psihst, psifhst = melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav)
+whst, wfhst, psihst, psifhst, obuhst, energyfhst, energyhst = melting(nx,ny,lx,ly,nt,dt,alpha,w,Fw,omega,isav)
 
-np.savez('./melt-res'+str(nx)+'-n'+str(n)+'-alpha'+str(alpha)+'-omega'+str(omega)+'-beta'+str(beta)+'-0'+str(run_iter)+'.npz',whst=whst, wfhst=wfhst, psihst=psihst, psifhst=psifhst,alpha=alpha, omega=omega, beta=beta)
+if run_iter < 10:
+    np.savez('./melt-n'+str(n)+'-omega'+str(omega)+'-tmp_0'+str(run_iter)+'.npz',whst=whst,wfhst=wfhst,psihst=psihst,psifhst=psifhst,obuhst=obuhst,energyfhst=energyfhst,energyhst=energyhst,omega=omega)
+else:
+    np.savez('./melt-n'+str(n)+'-omega'+str(omega)+'-tmp_'+str(run_iter)+'.npz',whst=whst,wfhst=wfhst,psihst=psihst,psifhst=psifhst,obuhst=obuhst,energyfhst=energyfhst,energyhst=energyhst,omega=omega)

@@ -8,7 +8,7 @@ sav_files = glob.glob(rootdir+'pst-n-pe-*.npz')
 run_iter = len(sav_files)
 
 # Grid size and time
-nx, ny = 64, 64 # 128, 128 or 256, 256
+nx, ny = 128, 128 # 128, 128 or 256, 256
 nt = 64000 # adjust as needed
 isav = nt//10
 Lx, Ly = 2.0*np.pi, 2.0*np.pi
@@ -25,7 +25,7 @@ Pe = (u*d*beta)/D
 m = 0 # shear mode
 eta = 0 # shear strength
 # psi_shear = (m/12)*np.sin(m*X/2)
-mfile = sorted(glob.glob('./melvel-*.npz'))
+mfile = sorted(glob.glob('./stream-*.npz'))
 vel = np.load(mfile[-1])
 ux = vel['ux']; uy = vel['uy']
 w = ux
@@ -44,7 +44,7 @@ sigma = 0.0009 # Need to figure this out still...
 dt = sigma * dx * dy / D
 alpha = dt/(2*dx)
 gamma = (D* dt) / (dx**2)
-g = -0.01; h = -1
+g = -1; h = -1
 
 # Finite difference solver
 def passive(n,nhst,w,v,alpha,gamma,nx,ny,kappa,g,h,nt,isav):
@@ -108,12 +108,7 @@ print('Time steps: ' + str(nt))
 print('Size: ' + str(Lx))
 print('iteration: ' + str(run_iter))
 print('Diffusion: ' + str(D))
-print('Mode Number: ' + str(m))
-print('Shear strength: ' + str(eta))
-print('Noise strength: ' + str(kappa))
-print('Peclet Number: ' + str(int(Pe)))
-print('iterations: ' + str(int(steps)))
+print('Total Steps: ' + str(int(steps)))
 navgy = np.sum(nhst[-1,:,:]*dy,axis=0)/Ly
 ntot = np.sum(navgy*dy)*Ly
-print('nmax = ' + str(np.max(navgy)))
 print('Concentration: ' + str(ntot))
